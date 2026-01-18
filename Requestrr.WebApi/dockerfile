@@ -1,38 +1,38 @@
-FROM node AS node-build
+# syntax=docker/dockerfile:1
 
-COPY ClientApp /app
+# --- Build arguments ---
+ARG DOTNET_VERSION=7.0
 
+# --- Builder stage ---
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS builder
+WORKDIR /src
+
+# Copy csproj and restore as distinct layers
+COPY --link Requestrr.WebApi/*.csproj ./
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    --mount=type=cache,target=/root/.cache/msbuild \
+    dotnet restore
+
+# Copy everything else and build
+COPY --link . .
+WORKDIR /src/Requestrr.WebApi
+RUN dotnet publish -c Release -o /app/publish
+
+# --- Final image ---
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS final
 WORKDIR /app
 
-RUN npm install
+# Security: create non-root user
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+USER appuser
 
-RUN npm run build
+COPY --from=builder /app/publish .
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 as dotnet-build
+# Expose default ASP.NET Core port
+EXPOSE 5000
 
-RUN apt-get update && \
-  apt-get --no-install-recommends -y install nodejs npm
+# Environment variables for ASP.NET Core
+ENV ASPNETCORE_URLS=http://+:5000
+ENV DOTNET_RUNNING_IN_CONTAINER=true
 
-COPY ./ /app
-COPY --from=node-build /app /app/ClientApp
-
-WORKDIR /app
-
-RUN dotnet publish -c release -o publish Requestrr.WebApi.csproj
-RUN rm -rf /app/publish/config
-RUN rm -rf /app/publish/tmp
-RUN mkdir /app/publish/config
-RUN rm -f /app/publish/appsettings.Development.json
-
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
-
-COPY --from=dotnet-build /app/publish/ /root/
-
-# allow all users access to this so we can run container as non root.
-RUN chmod -R 755 /root
-
-WORKDIR /root/
-
-ENV ASPNETCORE_URLS="http://*:4545"
-EXPOSE 4545/tcp
 ENTRYPOINT ["dotnet", "Requestrr.WebApi.dll"]

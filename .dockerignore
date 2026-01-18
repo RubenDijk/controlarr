@@ -1,0 +1,89 @@
+# Version control
+.git/
+.gitignore
+.svn/
+.hg/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build outputs and development artifacts
+dist/
+build/
+out/
+debug/
+*.log
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+
+# Go
+/vendor/
+*.test
+.go-cache/
+
+# Java
+target/
+*.class
+.gradle/
+
+# Test files and directories
+test/
+tests/
+*_test.go
+
+# Environment and secrets
+.env*
+*.env
+*.pem
+*.key
+*.crt
+config.local.*
+*.local.yml
+
+# Temporary and local files
+tmp/
+temp/
+*.tmp
+.local/
+local/
+
+# Documentation and markdown
+docs/
+*.md
+README*
+
+# Docker files
+Dockerfile*
+docker-compose*
+
+# Project-specific patterns
+# Ignore all .lock files (explicitly NOT included as per instructions)
+# Ignore all .mvnw, .gradlew, .mvn, .gradle files/directories (explicitly NOT included)
+
+# Ignore logos and assets not needed for build (if not required)
+Logos/
+
+# Ignore slash commands text file
+SlashCommands.txt
+
+# Ignore miscellaneous files
+*.bak
+*.old
+
+# Ignore package manager files (except .lock files)
+# (No .lock files included)
+
+# End of .dockerignore
