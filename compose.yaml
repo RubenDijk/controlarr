@@ -1,18 +1,42 @@
-services:
-  csharp-requestrr_webapi:
-    build:
-      context: ./Requestrr.WebApi
-      dockerfile: ../Requestrr.WebApiDockerfile
-    container_name: csharp-requestrr_webapi
-    restart: unless-stopped
-    init: true
-    ports:
-      - "5000:5000"  # Exposes the ASP.NET Core default port
-    # env_file: ./Requestrr.WebApi/.env  # Uncomment if .env file exists
-    # No external database or cache detected in documentation or code
-    # Add depends_on here if you add external services
-    # networks: [requestrr_net]  # Uncomment if you add more services that need to communicate
+# =============================================================================
+# Controlarr - Docker Compose for Unraid
+# =============================================================================
+# 
+# Usage:
+#   docker compose up -d --build
+#
+# Access the web interface at: http://your-server-ip:4545
+# =============================================================================
 
-# No external services (databases, caches, etc.) detected from the project structure or documentation
-# No volumes section needed as there are no persistent data requirements for this service
-# No networks section needed as there is only one service
+services:
+  controlarr:
+    build:
+      context: .
+      dockerfile: ./Requestrr.WebApi/dockerfile
+    container_name: controlarr
+    restart: unless-stopped
+    ports:
+      - "4545:4545"
+    volumes:
+      # Persistent configuration - change path for your Unraid setup
+      - ./config:/app/config
+      # Optional: mount for custom locales
+      # - ./locales:/app/locales:ro
+    environment:
+      - TZ=Europe/Amsterdam
+      # Optional: disable authentication for initial setup
+      # - REQUESTRR_DISABLE_AUTH=true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4545/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# =============================================================================
+# Unraid Users:
+# =============================================================================
+# 1. Change the volume path to: /mnt/user/appdata/controlarr/config:/app/config
+# 2. Set your timezone in the TZ environment variable
+# 3. Access via: http://your-unraid-ip:4545
+# =============================================================================

@@ -19,6 +19,7 @@ namespace Requestrr.WebApi.config
         public bool AutomaticallyNotifyRequesters { get; set; }
         public string NotificationMode { get; set; }
         public string[] NotificationChannels { get; set; }
+        public string[] ModeratorChannels { get; set; }
         public bool AutomaticallyPurgeCommandMessages { get; set; }
     }
 }

@@ -1,38 +1,107 @@
 # syntax=docker/dockerfile:1
 
-# --- Build arguments ---
-ARG DOTNET_VERSION=7.0
+# =============================================================================
+# Controlarr (Requestrr) - Production Dockerfile for Unraid
+# =============================================================================
 
-# --- Builder stage ---
-FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS builder
+# --- Build arguments ---
+ARG DOTNET_VERSION=6.0
+ARG NODE_VERSION=18
+
+# =============================================================================
+# Stage 1: Build Frontend (React)
+# =============================================================================
+FROM node:${NODE_VERSION}-alpine AS frontend-builder
+
+WORKDIR /app/ClientApp
+
+# Copy package files first for better caching
+COPY Requestrr.WebApi/ClientApp/package*.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy frontend source
+COPY Requestrr.WebApi/ClientApp/ ./
+
+# Build production frontend
+RUN npm run build
+
+# =============================================================================
+# Stage 2: Build Backend (.NET)
+# =============================================================================
+FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION}-alpine AS backend-builder
+
 WORKDIR /src
 
-# Copy csproj and restore as distinct layers
-COPY --link Requestrr.WebApi/*.csproj ./
-RUN --mount=type=cache,target=/root/.nuget/packages \
-    --mount=type=cache,target=/root/.cache/msbuild \
-    dotnet restore
-
-# Copy everything else and build
-COPY --link . .
+# Copy csproj and restore dependencies (cached layer)
+COPY Requestrr.WebApi/Requestrr.WebApi.csproj ./Requestrr.WebApi/
 WORKDIR /src/Requestrr.WebApi
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet restore --runtime linux-musl-x64
 
-# --- Final image ---
-FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS final
+# Copy backend source
+WORKDIR /src
+COPY Requestrr.WebApi/ ./Requestrr.WebApi/
+
+# Copy built frontend from previous stage
+COPY --from=frontend-builder /app/ClientApp/build ./Requestrr.WebApi/ClientApp/build/
+
+# Build and publish
+WORKDIR /src/Requestrr.WebApi
+RUN dotnet publish -c Release -o /app/publish \
+    --runtime linux-musl-x64 \
+    --self-contained false \
+    -p:PublishSingleFile=false \
+    -p:SpaRoot=ClientApp/ \
+    -p:SkipNpmInstall=true
+
+# =============================================================================
+# Stage 3: Production Runtime
+# =============================================================================
+FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION}-alpine AS production
+
+# Labels for Unraid
+LABEL maintainer="RubenDijk" \
+      org.opencontainers.image.title="Controlarr" \
+      org.opencontainers.image.description="Discord bot for requesting media via Sonarr, Radarr, Overseerr, and more" \
+      org.opencontainers.image.source="https://github.com/RubenDijk/controlarr" \
+      org.opencontainers.image.version="2.1.9"
+
+# Install timezone data and create user
+RUN apk add --no-cache \
+    tzdata \
+    icu-libs \
+    && addgroup -S controlarr \
+    && adduser -S -G controlarr controlarr
+
 WORKDIR /app
 
-# Security: create non-root user
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
-USER appuser
+# Copy published application
+COPY --from=backend-builder /app/publish .
 
-COPY --from=builder /app/publish .
+# Create config directory and set permissions
+RUN mkdir -p /app/config \
+    && chown -R controlarr:controlarr /app
 
-# Expose default ASP.NET Core port
-EXPOSE 5000
+# Volume for persistent configuration
+VOLUME ["/app/config"]
 
-# Environment variables for ASP.NET Core
-ENV ASPNETCORE_URLS=http://+:5000
-ENV DOTNET_RUNNING_IN_CONTAINER=true
+# Switch to non-root user
+USER controlarr
 
-ENTRYPOINT ["dotnet", "Requestrr.WebApi.dll"]
+# Expose port
+EXPOSE 4545
+
+# Environment variables
+ENV ASPNETCORE_URLS=http://+:4545 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
+    TZ=Europe/Amsterdam
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:4545/ || exit 1
+
+# Start application
+ENTRYPOINT ["dotnet", "Requestrr.WebApi.dll", "-c", "/app/config"]

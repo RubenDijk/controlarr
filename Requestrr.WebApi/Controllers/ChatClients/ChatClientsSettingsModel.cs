@@ -31,6 +31,8 @@ namespace Requestrr.WebApi.Controllers.ChatClients
 
         public string[] NotificationChannels { get; set; }
 
+        public string[] ModeratorChannels { get; set; }
+
         public bool AutomaticallyPurgeCommandMessages { get; set; }
 
         public string Language { get; set; }

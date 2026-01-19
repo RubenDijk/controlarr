@@ -43,6 +43,7 @@ namespace Requestrr.WebApi.Controllers.ChatClients
                 AutomaticallyNotifyRequesters = _chatClientsSettings.Discord.AutomaticallyNotifyRequesters,
                 NotificationMode = _chatClientsSettings.Discord.NotificationMode,
                 NotificationChannels = _chatClientsSettings.Discord.NotificationChannels ?? Array.Empty<string>(),
+                ModeratorChannels = _chatClientsSettings.Discord.ModeratorChannels ?? Array.Empty<string>(),
                 AutomaticallyPurgeCommandMessages = _chatClientsSettings.Discord.AutomaticallyPurgeCommandMessages,
                 Language = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(_chatClientsSettings.Language.ToLower()),
                 AvailableLanguages = GetLanguages()
@@ -149,6 +150,11 @@ namespace Requestrr.WebApi.Controllers.ChatClients
                 return BadRequest("Invalid monitored channels channels, please make sure to enter the monitored channel ids.");
             }
 
+            if ((model.ModeratorChannels ?? Array.Empty<string>()).Any(x => !ulong.TryParse(x, System.Globalization.NumberStyles.Integer, null, out _)))
+            {
+                return BadRequest("Invalid moderator channels, please make sure to enter the discord channel ids.");
+            }
+
             _chatClientsSettings.Discord.BotToken = model.BotToken.Trim();
             _chatClientsSettings.Discord.ClientId = model.ClientId;
             _chatClientsSettings.Discord.StatusMessage = model.StatusMessage.Trim();
@@ -160,7 +166,8 @@ namespace Requestrr.WebApi.Controllers.ChatClients
 
             _chatClientsSettings.Discord.AutomaticallyNotifyRequesters = model.AutomaticallyNotifyRequesters;
             _chatClientsSettings.Discord.NotificationMode = model.NotificationMode;
-            _chatClientsSettings.Discord.NotificationChannels = (model.NotificationChannels ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray(); ;
+            _chatClientsSettings.Discord.NotificationChannels = (model.NotificationChannels ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
+            _chatClientsSettings.Discord.ModeratorChannels = (model.ModeratorChannels ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
             _chatClientsSettings.Discord.AutomaticallyPurgeCommandMessages = model.AutomaticallyPurgeCommandMessages;
             _chatClientsSettings.Language = model.Language;
 

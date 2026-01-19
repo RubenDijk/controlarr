@@ -71,6 +71,7 @@ function ChatClients(props) {
   const [automaticallyNotifyRequesters, setAutomaticallyNotifyRequesters] = useState(true);
   const [notificationMode, setNotificationMode] = useState("PrivateMessages");
   const [notificationChannels, setNotificationChannels] = useState([]);
+  const [moderatorChannels, setModeratorChannels] = useState([]);
   const [automaticallyPurgeCommandMessages, setAutomaticallyPurgeCommandMessages] = useState(true);
   const [language, setLanguage] = useState("english");
   const [availableLanguages, setAvailableLanguages] = useState([]);
@@ -94,6 +95,7 @@ function ChatClients(props) {
         setAutomaticallyNotifyRequesters(data.payload.automaticallyNotifyRequesters);
         setNotificationMode(data.payload.notificationMode);
         setNotificationChannels(data.payload.notificationChannels);
+        setModeratorChannels(data.payload.moderatorChannels);
         setAutomaticallyPurgeCommandMessages(data.payload.automaticallyPurgeCommandMessages);
         setLanguage(data.payload.language);
         setAvailableLanguages(data.payload.availableLanguages);
@@ -196,6 +198,7 @@ function ChatClients(props) {
           automaticallyNotifyRequesters: automaticallyNotifyRequesters,
           notificationMode: notificationMode,
           notificationChannels: notificationChannels,
+          moderatorChannels: moderatorChannels,
           automaticallyPurgeCommandMessages: automaticallyPurgeCommandMessages,
           language: language,
         }))
@@ -540,6 +543,34 @@ function ChatClients(props) {
                         </>
                         : null
                     }
+                  </div>
+                  <div>
+                    <h6 className="heading-small text-muted mt-4">
+                      Overseerr Moderation Settings
+                    </h6>
+                  </div>
+                  <div className="pl-lg-4">
+                    <Row>
+                      <Col md="12">
+                        <FormGroup>
+                          <MultiDropdown
+                            name="Moderator channel(s) for Overseerr webhooks"
+                            create={true}
+                            searchable={true}
+                            placeholder="Enter channel ids where moderation requests will be posted"
+                            labelField="name"
+                            valueField="id"
+                            dropdownHandle={false}
+                            selectedItems={moderatorChannels.map(x => { return { name: x, id: x } })}
+                            items={moderatorChannels.map(x => { return { name: x, id: x } })}
+                            onChange={newModeratorChannels => setModeratorChannels(newModeratorChannels.filter(x => /\S/.test(x.id)).map(x => x.id.trim().replace(/#/g, '').replace(/\s+/g, '-')))} />
+                        </FormGroup>
+                        <p className="text-muted small">
+                          Configure Overseerr to send webhooks to <code>{window.location.origin}/api/webhooks/overseerr</code> for pending requests. 
+                          Moderators can then approve or decline requests directly from Discord.
+                        </p>
+                      </Col>
+                    </Row>
                   </div>
                   <div>
                     <h6 className="heading-small text-muted mt-4">
