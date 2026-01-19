@@ -43,7 +43,7 @@ RUN dotnet restore --runtime linux-musl-x64
 WORKDIR /src
 COPY Requestrr.WebApi/ ./Requestrr.WebApi/
 
-# Copy built frontend from previous stage
+# Copy built frontend from previous stage (this skips npm in dotnet publish)
 COPY --from=frontend-builder /app/ClientApp/build ./Requestrr.WebApi/ClientApp/build/
 
 # Build and publish
@@ -51,9 +51,7 @@ WORKDIR /src/Requestrr.WebApi
 RUN dotnet publish -c Release -o /app/publish \
     --runtime linux-musl-x64 \
     --self-contained false \
-    -p:PublishSingleFile=false \
-    -p:SpaRoot=ClientApp/ \
-    -p:SkipNpmInstall=true
+    --no-restore
 
 # =============================================================================
 # Stage 3: Production Runtime
